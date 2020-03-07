@@ -29,9 +29,9 @@ BOOL bIsLaunchHook = TRUE;
 CDS3Debug* DS3Debug;
 SDS3Debug* DS3DebugStruct;
 
-VOID InitDS3Debug();
+SDrawStruct DrawStruct[300];
 
-BYTE pSetAlBytes[5] = { 0xB0, 0x01, 0x90, 0x90, 0x90 };
+VOID InitDS3Debug();
 
 LPCSTR mImportNames[8] = { 
 	"D3D11On12CreateDevice",
@@ -51,11 +51,10 @@ LRESULT CALLBACK DXGIMsgProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 HRESULT __stdcall hookD3D11Present(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags)
 {
 
-	//MessageBox(NULL, "Blunks", "Error", MB_ICONERROR);
-
 	if (firstTime)
 
 	{
+
 		//get device and context
 		if (SUCCEEDED(pSwapChain->GetDevice(__uuidof(ID3D11Device), (void **)&pDevice)))
 		{
@@ -79,10 +78,10 @@ HRESULT __stdcall hookD3D11Present(IDXGISwapChain* pSwapChain, UINT SyncInterval
 		createParams.DisableGeometryShader = FALSE;
 		createParams.VertexBufferSize = 0;
 		createParams.DefaultFontParams.pszFontFamily = L"Ariel";
-		createParams.DefaultFontParams.FontWeight = DWRITE_FONT_WEIGHT_BOLD;
+		createParams.DefaultFontParams.FontWeight = DWRITE_FONT_WEIGHT_NORMAL;
 		createParams.DefaultFontParams.FontStyle = DWRITE_FONT_STYLE_NORMAL;
 		createParams.DefaultFontParams.FontStretch = DWRITE_FONT_STRETCH_NORMAL;
-		createParams.DefaultFontParams.pszLocale = L"";
+		createParams.DefaultFontParams.pszLocale = L"JP";
 
 		hResult = pFW1Factory->CreateFontWrapper(pDevice, NULL, &createParams, &pFontWrapper);
 
@@ -103,14 +102,21 @@ HRESULT __stdcall hookD3D11Present(IDXGISwapChain* pSwapChain, UINT SyncInterval
 
 	BOOL oDisplayTime = TRUE;
 
-	if (pFontWrapper)
-	{
-		if (bIsLaunchHook) {
-			CreateThread(0, 0, (LPTHREAD_START_ROUTINE)InitDS3Debug, 0, 0, 0);
-			bIsLaunchHook = false;
-			DS3DebugStruct->pFontWrapper = pFontWrapper;
+	if (!pFontWrapper) return phookD3D11Present(pSwapChain, SyncInterval, Flags);
+
+	if (bIsLaunchHook) {
+		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)InitDS3Debug, 0, 0, 0);
+		bIsLaunchHook = false;
+		DS3DebugStruct->pFontWrapper = pFontWrapper;
+	};
+
+	for (int i = 0; i < MaxPrint; i++) {
+		if (DrawStruct[i].dIsActive) {
+			pFontWrapper->DrawString(pContext, DrawStruct[i].sDebugPrint.wcText, DrawStruct[i].fFontSize, DrawStruct[i].sDebugPrint.fX, DrawStruct[i].sDebugPrint.fY, C_WHITE, FW1_RESTORESTATE);
 		};
-	}
+	};
+
+	DS3Debug->ClearStrings();
 
 	return phookD3D11Present(pSwapChain, SyncInterval, Flags);
 
@@ -122,6 +128,8 @@ VOID InitDS3Debug() {
 };
 
 DWORD BeginMainHook() {
+
+	BYTE pSetAlBytes[5] = { 0xB0, 0x01, 0x90, 0x90, 0x90 };
 
 	DS3Debug = new CDS3Debug();
 	DS3DebugStruct = new SDS3Debug();

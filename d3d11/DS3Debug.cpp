@@ -2,11 +2,26 @@
 
 DWORD64 bDS3DebugMenuPrint = 0;
 DWORD64 bDS3DebugGUIPrint = 0;
+DWORD64 bIPV4Hook = 0;
 
+extern CDS3Debug* DS3Debug;
 extern SDS3Debug* DS3DebugStruct;
+
+extern ID3D11RenderTargetView* RenderTargetView;
+
 BYTE pNopBytes[5] = { 0x90, 0x90, 0x90, 0x90, 0x90, };
 BYTE pRetBytes[1] = { 0xC3 };
 BYTE pXorRaxBytes[5] = { 0x48, 0x31, 0xC0, 0x90, 0x90 };
+BYTE pSetAlBytes[5] = { 0xB0, 0x01, 0x90, 0x90, 0x90 };
+DWORD dHMAVCheck1 = 0x00CE9840;
+DWORD dHMAVCheck2 = 0x036973AA;
+
+BYTE pFreeCamBytes1[5] = { 0xE8, 0xBD, 0xB0, 0xD0, 01 };
+BYTE pFreeCamBytes2[35] = { 0x44, 0x88, 0xA6, 0x98, 0x00, 0x00, 0x00, 0x8B, 0x83, 0xE0, 0x00, 0x00, 0x00, 0xFF, 0xC8, 0x83, 0xF8, 0x01, 0x0F, 0x87, 0x35, 0x01, 0x00, 0x00, 0x44, 0x88, 0xBE, 0x98, 0x00, 0x00, 0x00 };
+BYTE pJmpSwapBytes[1] = { 0xEB };
+BYTE pDecalBytes[1] = { 0x4F };
+
+extern SDrawStruct DrawStruct[300];
 
 VOID CDS3Debug::Start() {
 	Run();
@@ -16,16 +31,30 @@ VOID CDS3Debug::Start() {
 VOID CDS3Debug::Run() {
 
 	Hook(HookSite_Menu, &bDS3DebugMenuPrint, (DWORD64)&tDS3DebugMenuPrint, 7);
-	Hook(HookSite_GUI, &bDS3DebugGUIPrint, (DWORD64)&tDS3DebugGUIPrint, 5);
-	TweakMem(0x14236E076, 5, pNopBytes);
+	//Hook(HookSite_GUI, &bDS3DebugGUIPrint, (DWORD64)&tDS3DebugGUIPrint, 5);
+	
+	DS3Debug->Hook(0x1418C0E60, &bIPV4Hook, (DWORD64)&tIPV4Hook, 0);
+	TweakMem(0x14236E076, 5, pNopBytes); //-- Disable Font
 	TweakMem(0x142352600, 1, pRetBytes); //-- Disable Font
 	TweakMem(0x1423B7670, 1, pRetBytes); //-- Disable Font
 	TweakMem(0x141915370, 1, pRetBytes); //-- Disable Font
 	TweakMem(0x1403A44A0, 1, pRetBytes); //-- Disable Font
+	TweakMem(0x140CDC6E6, 1, pJmpSwapBytes); //-- Disable WindWorldCrash
+	TweakMem(0x14080A2F0, 2, pSetAlBytes); //-- Enable INS
+	TweakMem(0x14080A2E0, 2, pSetAlBytes); //-- Enable Event
+	TweakMem(0x140CECF31, 1, pDecalBytes); //-- Enable DECAL
+
+	//TweakMem(0x140E86CD1, 4, &dHMAVCheck1); //Bypass obfuscated code here
+	//TweakMem(0x140E85E31, 5, &dHMAVCheck2); //Bypass obfuscated code here
 	TweakMem(0x140E82DEE, 5, pXorRaxBytes); //-- (HeatMap Menu) Crash on load so it's disabled
+
+	//Features -- Freecam (A + L3)
+	TweakMem(0x14062C3AE, 5, pFreeCamBytes1);
+	TweakMem(0x14062C401, 31, pFreeCamBytes2);
 
 	while (DS3DebugStruct->dIsActive) {
 		SetUnhandledExceptionFilter(UHFilter);
+		ClearStrings();
 		Sleep(100);
 	};
 
@@ -62,27 +91,98 @@ BOOL CDS3Debug::TweakMem(DWORD64 qAddress, DWORD dSize, VOID* pBytes) {
 
 VOID fDS3DebugMenuPrint(SDebugPrint* D) {
 
+	FLOAT fFontSize = 20.00f;
+
+	SDebugPrint S = SDebugPrint();
+
 	if (!D) return;
-	if (!D->fX || !D->fY) return;
+	if (!D->fX || !D->fY || !D->wcText[0]) return;
 
-	//Crashes in-game for some reason -- Facing a wall helps so I guess it's something to do with graphics.
-	DS3DebugStruct->pFontWrapper->DrawString(pContext, D->wcText, 20.00, D->fX, D->fY, C_WHITE, FW1_RESTORESTATE);
+	DS3Debug->MinimiseShelvesOptions(&fFontSize, (DWORD)D->fY);
 
+	for (int i = 0; i < MaxPrint; i++) {
+		if (!DrawStruct[i].dIsActive) {
+			DrawStruct[i].dIsActive = 1;
+			DrawStruct[i].fFontSize = fFontSize;
+			DrawStruct[i].sDebugPrint.fX = D->fX;
+			DrawStruct[i].sDebugPrint.fY = D->fY;
+			memcpy(DrawStruct[i].sDebugPrint.wcText, D->wcText, 250);
+			break;
+		};
+	};
+
+	//DS3DebugStruct->pFontWrapper->DrawString(pContext, S.wcText, fFontSize, D->fX, D->fY, C_WHITE, FW1_RESTORESTATE);
 	return;
 };
 
 VOID fDS3DebugGUIPrint(FLOAT fX, FLOAT fY, wchar_t* pwcText) {
 
-	SDebugPrint D;
+	FLOAT fFontSize = 10.00f;
+
+	SDebugPrint D = SDebugPrint();
 
 	if (!fX || !fY || !pwcText) return;
 
-	D.fX = fX;
-	D.fY = fY;
-	
-	memcpy(D.wcText, pwcText, 50);
-	//Doesn't work for some reason.
-	DS3DebugStruct->pFontWrapper->DrawString(pContext, D.wcText, 20.00, D.fX, D.fY, C_WHITE, FW1_RESTORESTATE);
+	for (int i = 0; i < MaxPrint; i++) {
+		if (!DrawStruct[i].dIsActive) {
+			DrawStruct[i].dIsActive = 1;
+			DrawStruct[i].fFontSize = fFontSize;
+			DrawStruct[i].sDebugPrint.fX = fX;
+			DrawStruct[i].sDebugPrint.fY = fY;
+			memcpy(DrawStruct[i].sDebugPrint.wcText, pwcText, 250);
+			break;
+		};
+	};
+
+
+//	DS3DebugStruct->pFontWrapper->DrawString(pContext, D.wcText, 20.00, D.fX, D.fY, C_WHITE, FW1_RESTORESTATE);
+	return;
+};
+
+VOID CDS3Debug::MinimiseShelvesOptions(FLOAT* pFontSize, DWORD dY) {
+
+	//I've had to manually do this bit to look slick
+
+	switch (dY) {
+		case(80): {
+			*pFontSize = 18.00f;
+			return;
+		};
+		case(67): {
+			*pFontSize = 16.00f;
+			return;
+		};
+		case(56): {
+			*pFontSize = 14.00f;
+			return;
+		};
+		case(48): {
+			*pFontSize = 12.00f;
+			return;
+		};
+		case(42): {
+			*pFontSize = 10.00f;
+			return;
+		};
+		case(36): {
+			*pFontSize = 8.00f;
+			return;
+		};
+		case(32): {
+			*pFontSize = 7.00f;
+			return;
+		};
+		default: return;
+	};
+
+	return;
+};
+
+VOID CDS3Debug::ClearStrings() {
+
+	for (int i = 0; i < MaxPrint; i++) {
+		DrawStruct[i].dIsActive = 0;
+	};
 
 	return;
 };
