@@ -33,19 +33,20 @@ VOID CDS3Debug::Run() {
 	Hook(HookSite_Menu, &bDS3DebugMenuPrint, (DWORD64)&tDS3DebugMenuPrint, 7);
 	//Hook(HookSite_GUI, &bDS3DebugGUIPrint, (DWORD64)&tDS3DebugGUIPrint, 5);
 	
+	//Disable network access
 	DS3Debug->Hook(0x1418C0E60, &bIPV4Hook, (DWORD64)&tIPV4Hook, 0);
+
 	TweakMem(0x14236E076, 5, pNopBytes); //-- Disable Font
 	TweakMem(0x142352600, 1, pRetBytes); //-- Disable Font
 	TweakMem(0x1423B7670, 1, pRetBytes); //-- Disable Font
 	TweakMem(0x141915370, 1, pRetBytes); //-- Disable Font
 	TweakMem(0x1403A44A0, 1, pRetBytes); //-- Disable Font
+
 	TweakMem(0x140CDC6E6, 1, pJmpSwapBytes); //-- Disable WindWorldCrash
 	TweakMem(0x14080A2F0, 2, pSetAlBytes); //-- Enable INS
 	TweakMem(0x14080A2E0, 2, pSetAlBytes); //-- Enable Event
 	TweakMem(0x140CECF31, 1, pDecalBytes); //-- Enable DECAL
-
-	//TweakMem(0x140E86CD1, 4, &dHMAVCheck1); //Bypass obfuscated code here
-	//TweakMem(0x140E85E31, 5, &dHMAVCheck2); //Bypass obfuscated code here
+	TweakMem(0x142356840, 1, pRetBytes); //Enable active entity control (skip cameraparam crash)
 	TweakMem(0x140E82DEE, 5, pXorRaxBytes); //-- (HeatMap Menu) Crash on load so it's disabled
 
 	//Features -- Freecam (A + L3)
