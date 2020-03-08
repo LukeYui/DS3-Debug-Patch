@@ -30,6 +30,8 @@ VOID CDS3Debug::Start() {
 
 VOID CDS3Debug::Run() {
 
+	DWORD dBypassCheck1 = 0;
+
 	Hook(HookSite_Menu, &bDS3DebugMenuPrint, (DWORD64)&tDS3DebugMenuPrint, 7);
 	//Hook(HookSite_GUI, &bDS3DebugGUIPrint, (DWORD64)&tDS3DebugGUIPrint, 5);
 	
@@ -52,6 +54,9 @@ VOID CDS3Debug::Run() {
 	//Features -- Freecam (A + L3)
 	TweakMem(0x14062C3AE, 5, pFreeCamBytes1);
 	TweakMem(0x14062C401, 31, pFreeCamBytes2);
+
+	dBypassCheck1 = 0x0030EEA3;
+	TweakMem(0x1408B1CF1, 4, &dBypassCheck1); //Bypass the check that bricks saves
 
 	while (DS3DebugStruct->dIsActive) {
 		SetUnhandledExceptionFilter(UHFilter);
