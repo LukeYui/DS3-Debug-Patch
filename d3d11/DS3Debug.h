@@ -34,6 +34,7 @@ struct SDebugPrint {
 struct SDrawStruct {
 	DWORD dIsActive;
 	FLOAT fFontSize;
+	DWORD dColour;
 	SDebugPrint sDebugPrint;
 };
 

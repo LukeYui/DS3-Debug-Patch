@@ -76,6 +76,13 @@ tDS3DebugGUIPrint PROC
 
 tDS3DebugGUIPrint ENDP
 
+.data
+
+fFloatSubY REAL4 7.00f
+
+.code
+
+
 _tDS3DebugGUIPrint PROC
 
 	mov [rsp+08h],rax
@@ -96,6 +103,7 @@ _tDS3DebugGUIPrint PROC
 	mov r8,rbx
 	movss xmm0,DWORD PTR [rax]
 	movss xmm1,DWORD PTR [rax+04h]
+	subss xmm1,DWORD PTR [fFloatSubY]
 	call fDS3DebugGUIPrint
 	
 	Return:

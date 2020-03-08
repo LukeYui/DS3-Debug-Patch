@@ -18,3 +18,4 @@ extern IDXGISwapChain* pSwapChain;
 #define C_WHITE 0xFFFFFFFF  // RGBA White
 #define COLOUR 0xFFbfb300
 #define C_SHADOW 0xFF101010 // Shadow to improve readability
+#define C_BLACK 0xFF000000

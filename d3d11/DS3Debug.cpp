@@ -1,4 +1,4 @@
-#include "DS3Debug.h"
+﻿#include "DS3Debug.h"
 
 DWORD64 bDS3DebugMenuPrint = 0;
 DWORD64 bDS3DebugGUIPrint = 0;
@@ -31,9 +31,10 @@ VOID CDS3Debug::Start() {
 VOID CDS3Debug::Run() {
 
 	DWORD dBypassCheck1 = 0;
+	DWORD dBypassCheck2 = 0;
 
 	Hook(HookSite_Menu, &bDS3DebugMenuPrint, (DWORD64)&tDS3DebugMenuPrint, 7);
-	//Hook(HookSite_GUI, &bDS3DebugGUIPrint, (DWORD64)&tDS3DebugGUIPrint, 5);
+	//Hook(HookSite_GUI, &bDS3DebugGUIPrint, (DWORD64)&tDS3DebugGUIPrint, 5); //Flickers too badly.
 	
 	//Disable network access
 	DS3Debug->Hook(0x1418C0E60, &bIPV4Hook, (DWORD64)&tIPV4Hook, 0);
@@ -43,11 +44,12 @@ VOID CDS3Debug::Run() {
 	TweakMem(0x1423B7670, 1, pRetBytes); //-- Disable Font
 	TweakMem(0x141915370, 1, pRetBytes); //-- Disable Font
 	TweakMem(0x1403A44A0, 1, pRetBytes); //-- Disable Font
+	TweakMem(0x140CDB500, 1, pRetBytes); //-- Disable Font (WIND WORLD) (全クロス風デバッグ描画)
+	
 
 	TweakMem(0x140CDC6E6, 1, pJmpSwapBytes); //-- Disable WindWorldCrash
 	TweakMem(0x14080A2F0, 2, pSetAlBytes); //-- Enable INS
 	TweakMem(0x14080A2E0, 2, pSetAlBytes); //-- Enable Event
-	TweakMem(0x140CECF31, 1, pDecalBytes); //-- Enable DECAL
 	TweakMem(0x142356840, 1, pRetBytes); //Enable active entity control (skip cameraparam crash)
 	TweakMem(0x140E82DEE, 5, pXorRaxBytes); //-- (HeatMap Menu) Crash on load so it's disabled
 
@@ -57,6 +59,8 @@ VOID CDS3Debug::Run() {
 
 	dBypassCheck1 = 0x0030EEA3;
 	TweakMem(0x1408B1CF1, 4, &dBypassCheck1); //Bypass the check that bricks saves
+	dBypassCheck2 = 0xFFE48E31;
+	TweakMem(0x140EE7C01, 4, &dBypassCheck2); //This check restores this one ^
 
 	while (DS3DebugStruct->dIsActive) {
 		SetUnhandledExceptionFilter(UHFilter);
@@ -65,7 +69,7 @@ VOID CDS3Debug::Run() {
 	};
 
 	Unhook(HookSite_Menu);
-	Unhook(HookSite_GUI);
+	//Unhook(HookSite_GUI);
 
 	return;
 };
@@ -110,6 +114,7 @@ VOID fDS3DebugMenuPrint(SDebugPrint* D) {
 		if (!DrawStruct[i].dIsActive) {
 			DrawStruct[i].dIsActive = 1;
 			DrawStruct[i].fFontSize = fFontSize;
+			DrawStruct[i].dColour = C_WHITE;
 			DrawStruct[i].sDebugPrint.fX = D->fX;
 			DrawStruct[i].sDebugPrint.fY = D->fY;
 			memcpy(DrawStruct[i].sDebugPrint.wcText, D->wcText, 250);
@@ -117,7 +122,6 @@ VOID fDS3DebugMenuPrint(SDebugPrint* D) {
 		};
 	};
 
-	//DS3DebugStruct->pFontWrapper->DrawString(pContext, S.wcText, fFontSize, D->fX, D->fY, C_WHITE, FW1_RESTORESTATE);
 	return;
 };
 
@@ -133,6 +137,7 @@ VOID fDS3DebugGUIPrint(FLOAT fX, FLOAT fY, wchar_t* pwcText) {
 		if (!DrawStruct[i].dIsActive) {
 			DrawStruct[i].dIsActive = 1;
 			DrawStruct[i].fFontSize = fFontSize;
+			DrawStruct[i].dColour = C_BLACK;
 			DrawStruct[i].sDebugPrint.fX = fX;
 			DrawStruct[i].sDebugPrint.fY = fY;
 			memcpy(DrawStruct[i].sDebugPrint.wcText, pwcText, 250);
@@ -140,8 +145,6 @@ VOID fDS3DebugGUIPrint(FLOAT fX, FLOAT fY, wchar_t* pwcText) {
 		};
 	};
 
-
-//	DS3DebugStruct->pFontWrapper->DrawString(pContext, D.wcText, 20.00, D.fX, D.fY, C_WHITE, FW1_RESTORESTATE);
 	return;
 };
 

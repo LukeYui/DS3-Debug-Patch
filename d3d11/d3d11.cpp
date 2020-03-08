@@ -112,7 +112,12 @@ HRESULT __stdcall hookD3D11Present(IDXGISwapChain* pSwapChain, UINT SyncInterval
 
 	for (int i = 0; i < MaxPrint; i++) {
 		if (DrawStruct[i].dIsActive) {
-			pFontWrapper->DrawString(pContext, DrawStruct[i].sDebugPrint.wcText, DrawStruct[i].fFontSize, DrawStruct[i].sDebugPrint.fX, DrawStruct[i].sDebugPrint.fY, C_WHITE, FW1_RESTORESTATE);
+			pFontWrapper->DrawString(pContext, DrawStruct[i].sDebugPrint.wcText,
+				DrawStruct[i].fFontSize,
+				DrawStruct[i].sDebugPrint.fX,
+				DrawStruct[i].sDebugPrint.fY,
+				DrawStruct[i].dColour,
+				FW1_RESTORESTATE);
 		};
 	};
 
