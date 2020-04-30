@@ -1,7 +1,7 @@
 #pragma once
 #include "d3d11.h"
 
-#define HookSite_Menu 0x14236F86D
+#define HookSite_Menu 0x14236E070//0x14236F86D
 #define HookSite_GUI 0x1423A77EE
 #define MaxPrint 299
 
@@ -45,6 +45,10 @@ extern "C" VOID fDS3DebugMenuPrint(SDebugPrint* D);
 extern "C" VOID tDS3DebugGUIPrint();
 extern "C" DWORD64 bDS3DebugGUIPrint;
 extern "C" VOID fDS3DebugGUIPrint(FLOAT fX, FLOAT fY, wchar_t* pwcText);
+
+extern "C" VOID tDS3DebugMenuNEXT();
+extern "C" DWORD64 bDS3DebugMenuNEXT;
+extern "C" VOID fDS3DebugMenuNEXT(wchar_t* string, float, float);
 
 extern "C" VOID tIPV4Hook();
 extern "C" DWORD64 bIPV4Hook;

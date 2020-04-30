@@ -2,6 +2,7 @@
 
 DWORD64 bDS3DebugMenuPrint = 0;
 DWORD64 bDS3DebugGUIPrint = 0;
+DWORD64 bDS3DebugMenuNEXT = 0;
 DWORD64 bIPV4Hook = 0;
 
 extern CDS3Debug* DS3Debug;
@@ -16,12 +17,16 @@ BYTE pSetAlBytes[5] = { 0xB0, 0x01, 0x90, 0x90, 0x90 };
 DWORD dHMAVCheck1 = 0x00CE9840;
 DWORD dHMAVCheck2 = 0x036973AA;
 
+BYTE pGestureBytes[2] = { 0x90, 0x90 };
+
 BYTE pFreeCamBytes1[5] = { 0xE8, 0xBD, 0xB0, 0xD0, 01 };
 BYTE pFreeCamBytes2[35] = { 0x44, 0x88, 0xA6, 0x98, 0x00, 0x00, 0x00, 0x8B, 0x83, 0xE0, 0x00, 0x00, 0x00, 0xFF, 0xC8, 0x83, 0xF8, 0x01, 0x0F, 0x87, 0x35, 0x01, 0x00, 0x00, 0x44, 0x88, 0xBE, 0x98, 0x00, 0x00, 0x00 };
 BYTE pJmpSwapBytes[1] = { 0xEB };
 BYTE pDecalBytes[1] = { 0x4F };
 
 extern SDrawStruct DrawStruct[300];
+
+extern CRITICAL_SECTION CriticalSection;
 
 VOID CDS3Debug::Start() {
 	Run();
@@ -33,13 +38,13 @@ VOID CDS3Debug::Run() {
 	DWORD dBypassCheck1 = 0;
 	DWORD dBypassCheck2 = 0;
 
-	Hook(HookSite_Menu, &bDS3DebugMenuPrint, (DWORD64)&tDS3DebugMenuPrint, 7);
+	Hook(HookSite_Menu, &bDS3DebugMenuNEXT, (DWORD64)&tDS3DebugMenuNEXT, 11);//7);
 	//Hook(HookSite_GUI, &bDS3DebugGUIPrint, (DWORD64)&tDS3DebugGUIPrint, 5); //Flickers too badly.
 	
 	//Disable network access
 	DS3Debug->Hook(0x1418C0E60, &bIPV4Hook, (DWORD64)&tIPV4Hook, 0);
 
-	TweakMem(0x14236E076, 5, pNopBytes); //-- Disable Font
+	//TweakMem(0x14236E076, 5, pNopBytes); //-- Disable Font
 	TweakMem(0x142352600, 1, pRetBytes); //-- Disable Font
 	TweakMem(0x1423B7670, 1, pRetBytes); //-- Disable Font
 	TweakMem(0x141915370, 1, pRetBytes); //-- Disable Font
@@ -57,6 +62,9 @@ VOID CDS3Debug::Run() {
 	TweakMem(0x14062C3AE, 5, pFreeCamBytes1);
 	TweakMem(0x14062C401, 31, pFreeCamBytes2);
 
+	//Disable Gesture Menu
+	TweakMem(0x140B2D583, 2, pGestureBytes);
+
 	dBypassCheck1 = 0x0030EEA3;
 	TweakMem(0x1408B1CF1, 4, &dBypassCheck1); //Bypass the check that bricks saves
 	dBypassCheck2 = 0xFFE48E31;
@@ -64,7 +72,9 @@ VOID CDS3Debug::Run() {
 
 	while (DS3DebugStruct->dIsActive) {
 		SetUnhandledExceptionFilter(UHFilter);
-		ClearStrings();
+		//EnterCriticalSection(&CriticalSection);
+		//ClearStrings();
+		//LeaveCriticalSection(&CriticalSection);
 		Sleep(100);
 	};
 
@@ -110,6 +120,8 @@ VOID fDS3DebugMenuPrint(SDebugPrint* D) {
 
 	DS3Debug->MinimiseShelvesOptions(&fFontSize, (DWORD)D->fY);
 
+	//EnterCriticalSection(&CriticalSection);
+
 	for (int i = 0; i < MaxPrint; i++) {
 		if (!DrawStruct[i].dIsActive) {
 			DrawStruct[i].dIsActive = 1;
@@ -122,8 +134,37 @@ VOID fDS3DebugMenuPrint(SDebugPrint* D) {
 		};
 	};
 
+	//LeaveCriticalSection(&CriticalSection);
+
 	return;
 };
+
+VOID fDS3DebugMenuNEXT(wchar_t* string, float x, float y)
+{
+	FLOAT fFontSize = 20.00f;
+
+	if (!string)
+		return;
+
+	DS3Debug->MinimiseShelvesOptions(&fFontSize, (DWORD)y);
+
+	//EnterCriticalSection(&CriticalSection);
+
+	for (int i = 0; i < MaxPrint; i++)
+	{
+		if (!DrawStruct[i].dIsActive) {
+			DrawStruct[i].dIsActive = 1;
+			DrawStruct[i].fFontSize = 20.f;
+			DrawStruct[i].dColour = C_WHITE;
+			DrawStruct[i].sDebugPrint.fX = x;
+			DrawStruct[i].sDebugPrint.fY = y;
+			memcpy(DrawStruct[i].sDebugPrint.wcText, string, 250);
+			break;
+		};
+	}
+
+	//LeaveCriticalSection(&CriticalSection);
+}
 
 VOID fDS3DebugGUIPrint(FLOAT fX, FLOAT fY, wchar_t* pwcText) {
 
@@ -132,8 +173,8 @@ VOID fDS3DebugGUIPrint(FLOAT fX, FLOAT fY, wchar_t* pwcText) {
 	SDebugPrint D = SDebugPrint();
 
 	if (!fX || !fY || !pwcText) return;
-
-	for (int i = 0; i < MaxPrint; i++) {
+	return;
+	for (int i = 0; i < 0; i++) {
 		if (!DrawStruct[i].dIsActive) {
 			DrawStruct[i].dIsActive = 1;
 			DrawStruct[i].fFontSize = fFontSize;

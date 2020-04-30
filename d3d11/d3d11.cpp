@@ -19,6 +19,8 @@ IFW1FontWrapper *pFontWrapper = NULL;
 ID3D11Texture2D* RenderTargetTexture;
 ID3D11RenderTargetView* RenderTargetView = NULL;
 
+CRITICAL_SECTION CriticalSection;
+
 HINSTANCE mHinst = 0, mHinstDLL = 0;
 
 extern "C" UINT_PTR mProcs[51] = {0};
@@ -54,6 +56,8 @@ HRESULT __stdcall hookD3D11Present(IDXGISwapChain* pSwapChain, UINT SyncInterval
 	if (firstTime)
 
 	{
+		if (!InitializeCriticalSectionAndSpinCount(&CriticalSection, 0x00000400))
+			return 0;
 
 		//get device and context
 		if (SUCCEEDED(pSwapChain->GetDevice(__uuidof(ID3D11Device), (void **)&pDevice)))
@@ -110,6 +114,11 @@ HRESULT __stdcall hookD3D11Present(IDXGISwapChain* pSwapChain, UINT SyncInterval
 		DS3DebugStruct->pFontWrapper = pFontWrapper;
 	};
 
+	//EnterCriticalSection(&CriticalSection);
+	
+	//if (DrawStruct[1].dIsActive)
+	//	pFontWrapper->DrawString(pContext, DrawStruct[1].sDebugPrint.wcText, 20.f, 500.f, 100.f, 0xffffffff, FW1_RESTORESTATE);
+
 	for (int i = 0; i < MaxPrint; i++) {
 		if (DrawStruct[i].dIsActive) {
 			pFontWrapper->DrawString(pContext, DrawStruct[i].sDebugPrint.wcText,
@@ -122,6 +131,7 @@ HRESULT __stdcall hookD3D11Present(IDXGISwapChain* pSwapChain, UINT SyncInterval
 	};
 
 	DS3Debug->ClearStrings();
+	//LeaveCriticalSection(&CriticalSection);
 
 	return phookD3D11Present(pSwapChain, SyncInterval, Flags);
 
@@ -288,7 +298,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved) {
 		break;
 
 	case DLL_PROCESS_DETACH:
-
+		DeleteCriticalSection(&CriticalSection);
 		FreeLibrary(mHinstDLL);
 
 		break;
