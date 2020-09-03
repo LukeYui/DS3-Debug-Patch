@@ -291,8 +291,6 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
             FreeLibrary(dinput8dll);
         }
 
-        MessageBoxA(NULL, "LOL.", "YuiSpy", MB_ICONERROR);
-
         MH_DisableHook(MH_ALL_HOOKS);
         MH_Uninitialize();
 
